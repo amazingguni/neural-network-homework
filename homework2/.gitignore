@@ -1,2 +1,5 @@
 data/
 output/
+data_orig/
+*.swp
+checkpoints/

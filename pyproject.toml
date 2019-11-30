@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "neural-network-homework"
+version = "0.1.0"
+description = ""
+authors = ["Younggun Na"]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+torch = "^1.3"
+torchvision = "^0.4.2"
+
+[tool.poetry.dev-dependencies]
+jupyterlab = "^1.2"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

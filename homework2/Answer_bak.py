@@ -48,7 +48,6 @@ class HomeworkDataset(Dataset):
         if self.data == 'cifar':
             image = image.reshape(3, 32, 32).transpose(1, 2, 0)
             image = Image.fromarray(image, 'RGB')
-            image.save('asdf.png')
         elif self.data == 'mnist':
             image = image.reshape(28, 28)
             image = Image.fromarray(np.uint8(image * 255) , 'L')
@@ -199,28 +198,28 @@ def train(model, train_loader, valid_loader, batch_size, lr, num_epochs, print_e
 
 def test(model, test_loader, save_path, data):
     model.eval()
-    total_pred = np.array([])
-    for images, _ in test_loader:
-        images = Variable(images).to(device)
-        test_pred = model(images)
-        test_pred = np.argmax(test_pred.data.cpu().numpy(), axis=1)
-        total_pred = np.hstack(total_pred, test_pred)
-
+    test_data = next(iter(valid_loader))
+    images, _ = test_data
+    images = Variable(images).to(device)
+    test_pred = model(images)
+    test_pred = np.argmax(test_pred.data.cpu().numpy(), axis=1)
     true = np.load(f'{data}_test_y.npy')
-    total = true.shape[0]
-    correct = len(np.where(total_pred == true)[0])
+    total = test_pred.shape[0]
+    correct = len(np.where(test_pred == true)[0])
     real_acc = correct / total
-    # print(','.join([f'({pred}, {label})' for pred, label in zip(total_pred, true)]))
+    print(','.join([f'({pred}, {label})' for pred, label in zip(test_pred, true)]))
     print(f'Real Accuracy = {real_acc * 100:.4f}({correct}/{total})')
 
     # You need to save and submit the 'test_pred.npy' under the output directory.
     np.save(os.path.join(save_path, 'test_pred.npy'), test_pred)
 
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
-    parser.add_argument('--batch-size', type=int, default=128, help='batch size')
+    parser.add_argument('--batch', type=int, default=128, help='batch size')
     parser.add_argument('--epoch', type=int, default=200, help='num_epochs')
     parser.add_argument('--data', default='mnist', help='mnist, cifar')
     parser.add_argument('--task', default='1_imbalanced', help='1_imbalanced, 2_semisupervised, 3_noisy')
@@ -232,44 +231,27 @@ if __name__ == '__main__':
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(15),
+        # https://github.com/kuangliu/pytorch-cifar/issues/19
+        #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
         transforms.ToTensor(),
+        # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
     
     transform_test = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
     ])
+
+    train_loader, valid_loader, test_loader = load_dataset(args.data, args.task, transform_train, transform_test, args.batch)
     
-    data = args.data
-    task = args.task
-    print('#'*50)
-    print('DATA: {}'.format(data))
-    print('TASK: {}'.format(task))
-    print('#'*50)
-    
-    batch_size = args.batch_size
-
-    # Load the dataset
-    data_path = os.path.join('./data', data, task)
-    train_dataset = HomeworkDataset(os.path.join(data_path, 'train_x.npy'), os.path.join(data_path, 'train_y.npy'), data, transform_train)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
-    valid_dataset = HomeworkDataset(os.path.join(data_path, 'valid_x.npy'), os.path.join(data_path, 'valid_y.npy'), data, transform_test)
-    valid_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size, shuffle=False)
-
-    test_dataset = HomeworkDataset(os.path.join(data_path, 'test_x.npy'), None, data, transform_test)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
-
-    # Check the shape of your data
-    print(f'x_train shape: {train_dataset[0][0].shape}')
-    print(f'x_valid shape: {valid_dataset[0][0].shape}')
-    print(f'x_test shape: {test_dataset[0][0].shape}')
-    print('#'*50)
-
     trainset = torchvision.datasets.CIFAR100(root='./data_orig', train=True, download=True, transform=transform_train)
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
-    #testset = torchvision.datasets.CIFAR100(root='./data_orig', train=False, download=True, transform=transform_test)
-    #valid_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
+    train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch, shuffle=True, num_workers=2)
+    train_cifar100 = trainset[0]
+    print(f'cifar100 origin size: {train_cifar100[0].shape}')
+    testset = torchvision.datasets.CIFAR100(root='./data_orig', train=False, download=True, transform=transform_test)
+    valid_loader = torch.utils.data.DataLoader(testset, batch_size=args.batch, shuffle=False, num_workers=2)
 
     #model = models.resnet18(pretrained=True).to(device)
     model = models.resnet18().to(device)
@@ -278,7 +260,7 @@ if __name__ == '__main__':
         model = torch.nn.DataParallel(model)
         
     checkpoint_path = os.path.join('./checkpoints', args.data, args.task)
-    train(model, train_loader, valid_loader, lr=args.lr, batch_size=batch_size, num_epochs=args.epoch, print_every=args.print, checkpoint_path=checkpoint_path)
+    train(model, train_loader, valid_loader, lr=args.lr, batch_size=args.batch, num_epochs=args.epoch, print_every=args.print, checkpoint_path=checkpoint_path)
     save_path = os.path.join('./output', args.data, args.task)
     test(model, test_loader, save_path, args.data)
 
