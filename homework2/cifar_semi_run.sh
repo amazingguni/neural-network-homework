@@ -6,7 +6,7 @@ TASK="2_semisupervised"
 USE_ALL=--use-all
 LOSS="sce"
 #LOSS="ce"
-CONFIDENCE=0.8
+CONFIDENCE=0.6
 # Only Training set
 # SEMI_CKPT="./output/cifar/2_semisupervised/191204-1437/best.pth"
 # Use all

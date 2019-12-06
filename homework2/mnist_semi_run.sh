@@ -1,17 +1,18 @@
 
 source common.sh
 
-export CUDA_VISIBLE_DEVICES="3"
 DATA=mnist
 TASK="2_semisupervised"
 USE_ALL=--use-all
 LOSS="sce"
-EPOCH=250
+EPOCH=200
 CONFIDENCE=0.8
 # Only Training set
 #SEMI_CKPT="./output/mnist/2_semisupervised/191204-1331/best.pth"
 # Use all
-SEMI_CKPT="./output/mnist/2_semisupervised/191204-1423/best.pth"
+SUB_CKPT="./output/mnist/2_semisupervised/191204-1423/best.pth"
+ALPHA=1.0
+BETA=0.5
 
 python Answer.py \
     --epoch $EPOCH \
@@ -21,7 +22,7 @@ python Answer.py \
     --print 1 \
     --batch-size $BATCH_SIZE \
     --loss $LOSS \
-    --sce-alpha 0.1 \
-    --sce-beta 1.0 \
-    --semi  --semi-ckpt $SEMI_CKPT --confidence $CONFIDENCE \
+    --sce-alpha $ALPHA \
+    --sce-beta $BETA \
+    --semi  --sub-ckpt $SUB_CKPT --confidence $CONFIDENCE \
     $USE_ALL $BALANED
