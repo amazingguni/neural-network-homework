@@ -1,12 +1,8 @@
-
 source common.sh
 
-export CUDA_VISIBLE_DEVICES="0"
-DATA=cifar
-TASK=origin
-#USE_ALL='--use-all'
-EPOCH=1
-BALANED='--balanced'
+export CUDA_VISIBLE_DEVICES="2"
+DATA=mnist
+TASK=3_noisy
 
 python Answer.py \
     --epoch $EPOCH \
@@ -15,4 +11,4 @@ python Answer.py \
     --task $TASK \
     --print 1 \
     --batch-size $BATCH_SIZE \
-    $USE_ALL $BALANED
+    $USE_ALL $BALANED --only-valid

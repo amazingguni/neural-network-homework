@@ -1,13 +1,11 @@
 
 source common.sh
+export CUDA_VISIBLE_DEVICES="3"
 
-export CUDA_VISIBLE_DEVICES="0"
 DATA=cifar
-TASK=origin
-#USE_ALL='--use-all'
-EPOCH=1
-BALANED='--balanced'
-
+TASK=2_semisupervised
+USE_ALL=--use-all
+EPOCH=250
 python Answer.py \
     --epoch $EPOCH \
     --lr $LR \
